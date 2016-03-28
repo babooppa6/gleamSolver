@@ -1,9 +1,9 @@
-// ==UserScript== 
+// ==UserScript==
 // @name Gleam.solver
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Autocompletes Gleam.io entries and undoes any forced social media actions
 // @author Citrinate
-// @version 1.0.3
+// @version 1.0.4
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -38,11 +38,21 @@
 							steamHandler.handleEntry(current_entry);
 							break;
 
+						case "custom_action":
+						case "youtube_subscribe":
+							falseClick(current_entry);
+							break;
+
 						//TODO: handle more entry types
 						default: break;
 					}
 				}
 			}
+		}
+
+		function falseClick(entry) {
+			entry.triggerVisit(entry.entry_method.id);
+			markEntryCompleted(entry);
 		}
 
 		function markEntryCompleted(entry) {
