@@ -2,8 +2,8 @@
 // @name Gleam.solver
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Autocompletes Gleam.io entries and undoes any forced social media actions
-// @authur Citrinate
-// @version 1.0.1
+// @author Citrinate
+// @version 1.0.2
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -114,8 +114,8 @@
 	// does the actual steam group joining/leaving
 	function initCommandHub() {
 		// wait for our parent to tell us what to do
-		window.addEventListener("message", function(event) {            
-			if(event.source == parent) {
+		window.addEventListener("message", function(event) {
+			if(event.source == parent && event.origin == "https://gleam.io") {
 				if(event.data.action == "join") {
 					joinGroup(event.data.name, event.data.id);
 				} else if(event.data.action == "leave") {
@@ -148,7 +148,8 @@
 	// determine where we are and call the appropriate function
 	if(document.location.hostname == "gleam.io") {
 		gleamSolver.completeEntries();
-	} else if (document.location.hostname == "steamcommunity.com"){
+	} else if(document.location.hostname == "steamcommunity.com") {
+		console.log("hello");
 		initCommandHub();
 	}
 })();
