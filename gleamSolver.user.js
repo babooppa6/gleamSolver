@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Autocompletes Gleam.io entries and undoes any forced social media actions
 // @author Citrinate
-// @version 1.0.4
+// @version 1.1
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -30,6 +30,9 @@
 
 			for(var i = 0; i < entries.length; i++) {
 				var current_entry = angular.element(entries[i]).scope();
+				
+				// reveal hidden entries
+				current_entry.entry_method.mandatory = true;
 
 				if(gleam.canEnter(current_entry.entry_method) && !gleam.isEntered(current_entry.entry_method)) {
 					switch(current_entry.entry_method.entry_type) {
@@ -40,24 +43,43 @@
 
 						case "custom_action":
 						case "youtube_subscribe":
-							falseClick(current_entry);
+							handleClickEntry(current_entry);
+							break;
+							
+						case "youtube_watch":
+							handleYoutubeVideoEntry(current_entry);
 							break;
 
 						//TODO: handle more entry types
-						default: break;
+						default: 
+							break;
 					}
 				}
 			}
 		}
 
-		function falseClick(entry) {
+		function markEntryCompleted(entry) {
+			entry.entry_method.entering = false;
+			entry.enterLinkClick(entry.entry_method);
+			entry.verifyEntryMethod();
+		}
+		
+		// provides visual feedback to the user that something is happening
+		function markEntryLoading(entry) {
+			entry.entry_method.entering = true;
+		}
+
+		function handleClickEntry(entry) {
+			markEntryLoading(entry);
 			entry.triggerVisit(entry.entry_method.id);
 			markEntryCompleted(entry);
 		}
 
-		function markEntryCompleted(entry) {
-			entry.enterLinkClick(entry.entry_method);
-			entry.verifyEntryMethod();
+		function handleYoutubeVideoEntry(entry) {
+			markEntryLoading(entry);
+			entry.entry_method.watched = true;
+			entry.videoWatched(entry.entry_method);
+			markEntryCompleted(entry);
 		}
 
 		// handles steam_join_group entries
@@ -91,6 +113,7 @@
 
 				return {
 					handleEntry: function(entry) {
+						markEntryLoading(entry);
 						handleGroup(entry, entry.entry_method.config3, entry.entry_method.config4);
 					}
 				};
