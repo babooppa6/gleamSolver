@@ -2,7 +2,8 @@
 // @name Gleam.solver
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Autocompletes Gleam.io entries and undoes any forced social media actions
-// @version 1.0
+// @authur Citrinate
+// @version 1.0.1
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -13,18 +14,18 @@
 (function() {
 	var gleamSolver = (function() {
 		var gleam = null;
-        var waitingInterval = null;
-        var steamHandler = null;
+		var waitingInterval = null;
+		var steamHandler = null;
 		
-        function waitForGleam() {
-            if(document.querySelector(".popup-blocks-container") != null) {
-                clearInterval(waitingInterval);
-                gleam = angular.element(document.querySelector(".popup-blocks-container")).scope();
-                handleEntries();
-            }
-        }
-        
-        function handleEntries() {
+		function waitForGleam() {
+			if(document.querySelector(".popup-blocks-container") != null) {
+				clearInterval(waitingInterval);
+				gleam = angular.element(document.querySelector(".popup-blocks-container")).scope();
+				handleEntries();
+			}
+		}
+		
+		function handleEntries() {
 			var entries = document.querySelectorAll(".entry-method");
 			
 			for(var i = 0; i < entries.length; i++) {
@@ -33,7 +34,7 @@
 				if(gleam.canEnter(current_entry.entry_method) && !gleam.isEntered(current_entry.entry_method)) {
 					switch(current_entry.entry_method.entry_type) {
 						case "steam_join_group":
-                            if(steamHandler == null) steamHandler = loadSteamHandler.getInstance();
+							if(steamHandler == null) steamHandler = loadSteamHandler.getInstance();
 							steamHandler.handleEntry(current_entry);
 							break;
 							
@@ -42,107 +43,107 @@
 					}
 				}
 			}
-        }
-        
-        function markEntryCompleted(entry) {
+		}
+		
+		function markEntryCompleted(entry) {
 			entry.enterLinkClick(entry.entry_method)
 			entry.verifyEntryMethod();
 			return Boolean(gleam.isEntered(entry.entry_method));
 		}
-        
-        // handles steam_join_group entries
-        var loadSteamHandler = (function() {
-            function init() {
-                // Need some way to communicate with steamcommunity.com that is preferrably transparent
-                // to the user.  command_hub is simply a page on steamcommunity.com that can be loaded
-                // into an iframe.  We can communicate with the iframe from here and use it as our
-                // interface to joining and leaving Steam groups.
-                var command_hub = document.createElement('iframe');
-                command_hub.style.display = "none";
-                command_hub.src = "https://steamcommunity.com/app/329630";
-                document.body.appendChild(command_hub);
-                
-                function handleGroup(entry, group_name, group_id) {
-                    // wait for the command_hub to load
-                    command_hub.addEventListener("load", function() {
-                        // make contact
-                        command_hub.contentWindow.postMessage({action: "join", name: group_name, id: group_id}, "*");
-
-                        // wait for a response
-                        window.addEventListener("message", function(event) {
-                            if(event.source == command_hub.contentWindow && event.data.id == group_id && event.data.status == "joined") {
-                                // we're in the group, mark the entry and get out of there
-                                markEntryCompleted(entry);
-                                command_hub.contentWindow.postMessage({action: "leave", name: group_name, id: group_id}, "*");
-                            }
-                        }, false);
-                    });
-                }
-                
-                return {
-                    handleEntry: function(entry) {
-                        // if we're already in the group, then we don't need to do anything special
-                        if(!markEntryCompleted(entry)) {
-                            handleGroup(entry, entry.entry_method.config3, entry.entry_method.config4);
-                        }
-                    }
-                };
-            }
-            
-            var instance;            
-            return {
-                getInstance: function() {
-                    if(!instance) instance = init();                
-                    return instance;
-                }
-            };
-        })();
-        
+		
+		// handles steam_join_group entries
+		var loadSteamHandler = (function() {
+			function init() {
+				// Need some way to communicate with steamcommunity.com that is preferrably transparent
+				// to the user.  command_hub is simply a page on steamcommunity.com that can be loaded
+				// into an iframe.  We can communicate with the iframe from here and use it as our
+				// interface to joining and leaving Steam groups.
+				var command_hub = document.createElement('iframe');
+				command_hub.style.display = "none";
+				command_hub.src = "https://steamcommunity.com/app/329630";
+				document.body.appendChild(command_hub);
+				
+				function handleGroup(entry, group_name, group_id) {
+					// wait for the command_hub to load
+					command_hub.addEventListener("load", function() {
+						// make contact
+						command_hub.contentWindow.postMessage({action: "join", name: group_name, id: group_id}, "*");
+		
+						// wait for a response
+						window.addEventListener("message", function(event) {
+							if(event.source == command_hub.contentWindow && event.data.id == group_id && event.data.status == "joined") {
+								// we're in the group, mark the entry and get out of there
+								markEntryCompleted(entry);
+								command_hub.contentWindow.postMessage({action: "leave", name: group_name, id: group_id}, "*");
+							}
+						}, false);
+					});
+				}
+				
+				return {
+					handleEntry: function(entry) {
+						// if we're already in the group, then we don't need to do anything special
+						if(!markEntryCompleted(entry)) {
+							handleGroup(entry, entry.entry_method.config3, entry.entry_method.config4);
+						}
+					}
+				};
+			}
+			
+			var instance;            
+			return {
+				getInstance: function() {
+					if(!instance) instance = init();                
+					return instance;
+				}
+			};
+		})();
+		
 		return {
 			completeEntries: function() {
-                if(gleam == null && waitingInterval == null) {                    
-                    // wait for gleam to finish loading
-                    waitingInterval = setInterval(waitForGleam, 500);
-                } else {
-                    handleEntries();
-                }
+				if(gleam == null && waitingInterval == null) {                    
+					// wait for gleam to finish loading
+					waitingInterval = setInterval(waitForGleam, 500);
+				} else {
+					handleEntries();
+				}
 			}
 		};
 	})();
 	
 	// does the actual steam group joining/leaving
-    function initCommandHub() {
-        // wait for our parent to tell us what to do
-        window.addEventListener("message", function(event) {            
-            if(event.source == parent) {
-                if(event.data.action == "join") {
-                    joinGroup(event.data.name, event.data.id);
-                } else if(event.data.action == "leave") {
-                    leaveGroup(event.data.name, event.data.id);
-                }
-            }
-        }, false);
-
-        function joinGroup(group_name, group_id) {
-            jQuery.ajax({
-                url: "https://steamcommunity.com/groups/" + group_name,
-                type: "POST",
-                data: {action: "join", sessionID: g_sessionID},
-                complete: function() {
-                    parent.postMessage({status: "joined", name: group_name, id: group_id}, "*");
-                }
-            });
-        }
-
-        function leaveGroup(group_name, group_id) {
-            // no real need to let the gleamSolver know we left the group
-            jQuery.ajax({
-                url: jQuery(".playerAvatar a").attr("href").replace("http://", "https://") + "home_process",
-                type: "POST",
-                data: {sessionID: g_sessionID, action: "leaveGroup", groupId: group_id}
-            });
-        }
-    }
+	function initCommandHub() {
+		// wait for our parent to tell us what to do
+		window.addEventListener("message", function(event) {            
+			if(event.source == parent) {
+				if(event.data.action == "join") {
+					joinGroup(event.data.name, event.data.id);
+				} else if(event.data.action == "leave") {
+					leaveGroup(event.data.name, event.data.id);
+				}
+			}
+		}, false);
+	
+		function joinGroup(group_name, group_id) {
+			jQuery.ajax({
+				url: "https://steamcommunity.com/groups/" + group_name,
+				type: "POST",
+				data: {action: "join", sessionID: g_sessionID},
+				complete: function() {
+					parent.postMessage({status: "joined", name: group_name, id: group_id}, "*");
+				}
+			});
+		}
+	
+		function leaveGroup(group_name, group_id) {
+			// no real need to let the gleamSolver know we left the group
+			jQuery.ajax({
+				url: jQuery(".playerAvatar a").attr("href").replace("http://", "https://") + "home_process",
+				type: "POST",
+				data: {sessionID: g_sessionID, action: "leaveGroup", groupId: group_id}
+			});
+		}
+	}
 	
 	// determine where we are and call the appropriate function
 	if(document.location.hostname == "gleam.io") {
