@@ -3,12 +3,11 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.2.1
+// @version 1.2.2
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
 // @downloadURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
-// @require https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js
 // @run-at document-end
 // ==/UserScript==
 
@@ -16,7 +15,7 @@
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
 	var command_hub_url = "https://steamcommunity.com/app/329630";
-	var current_version = "1.2.1";
+	var current_version = "1.2.2";
 
 	var gleamSolver = (function() {
 		var gleam = null;
@@ -77,6 +76,7 @@
 								// custom_action entries can take many different forms
 								switch(current_entry.entry_method.method_type) {
 									case "None":
+									case "Use tracking":
 										handleClickEntry(current_entry);
 										break;
 									
