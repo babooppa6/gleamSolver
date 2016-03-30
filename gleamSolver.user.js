@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.2.2
+// @version 1.2.3
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -15,7 +15,7 @@
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
 	var command_hub_url = "https://steamcommunity.com/app/329630";
-	var current_version = "1.2.2";
+	var current_version = "1.2.3";
 
 	var gleamSolver = (function() {
 		var gleam = null;
@@ -24,8 +24,8 @@
 	
 		// possible modes:
 		// "undo_all" (Instant-win mode): There should be no record of any social media activity on the user's accounts
-		// "undo_some" (Not presently used): Only when possible, remove all record of social media activity on the user's accounts
-		// "undo_none (Raffle mode): All record of social media activity should remain on the user's accounts 
+		// "undo_none (Raffle mode): All record of social media activity should remain on the user's accounts
+		// "undo_some" (Not presently used): Mark all entries and remove all possible record of social media activity on the user's accounts
 		function determineMode() {
 			switch(gleam.campaign.campaign_type) {			
 				case "Reward": return "undo_all"; // Instant-win
@@ -51,7 +51,6 @@
 						case "youtube_subscribe":
 						case "facebook_visit":
 						case "twitchtv_enter":
-						case "twitchtv_follow":
 						case "twitter_enter":
 						case "steam_enter":
 						case "steam_play_game":
@@ -59,7 +58,8 @@
 							break;
 							
 						case "youtube_watch":
-							handleYoutubeVideoEntry(current_entry);
+						case "vimeo_watch":
+							handleVideoEntry(current_entry);
 							break;
 						
 						default: 
@@ -90,11 +90,12 @@
 						}
 					}
 					
-					// the following entry types cannot be undone, and so only automate them
-					// if the user doesn't want social media actions to be undone:
+					// the following entry types cannot presently be undone, and so only automate
+					// them if the user doesn't want social media actions to be undone:
 					// such as in the case of gleam raffles
 					if(script_mode != "undo_all") {
 						switch(current_entry.entry_method.entry_type) {
+							case "twitchtv_follow":
 							case "twitter_follow":
 							case "twitter_tweet":
 							case "twitter_retweet":
@@ -139,7 +140,7 @@
 		}
 
 		// trick gleam into thinking we've watched a video
-		function handleYoutubeVideoEntry(entry) {
+		function handleVideoEntry(entry) {
 			markEntryLoading(entry);
 			entry.entry_method.watched = true;
 			entry.videoWatched(entry.entry_method);
