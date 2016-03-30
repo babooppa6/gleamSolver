@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.2
+// @version 1.2.1
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -16,7 +16,7 @@
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
 	var command_hub_url = "https://steamcommunity.com/app/329630";
-	var current_version = "1.2";
+	var current_version = "1.2.1";
 
 	var gleamSolver = (function() {
 		var gleam = null;
@@ -229,7 +229,8 @@
 		var gleam_solver_ui = 
 			jQuery("<div>", { css: container_style }).append(
 				jQuery("<span>", { text: "Gleam.solver v" + current_version })).append(
-				jQuery("<a>", { text: "Click here to auto-complete", class: button_class, css: button_style}).click(function() { 
+				jQuery("<a>", { text: "Click here to auto-complete", class: button_class, css: button_style}).click(function() {
+					jQuery(this).unbind("click");
 					gleam_solver_ui.slideUp();
 					gleamSolver.completeEntries();
 				})
