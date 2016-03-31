@@ -14,8 +14,6 @@ If the script doesn't auto-complete a certain entry type in this mode, then it's
 
 In the case of raffles, you may be disqualified for undoing any of the social media actions that the raffle asks of you. To prevent this, the script will only auto-complete the entries, it will not undo any of them. If the script doesn't auto-complete a certain entry type in this mode, then it's because it can't be auto-completed without the risk of disqualification, and so you'll have to complete it manually.
 
-**Disclaimer**: The usage of this script violates Gleam.io's Terms of Service.  Use at your own risk.
-
 ##Installation
 1. Install the [Tampermonkey extension](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en) (for Chrome) or the [Greasemonkey extension](https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/) (for Firefox)
 2. Go [here](https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js)
