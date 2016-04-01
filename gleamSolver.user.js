@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.3.0
+// @version 1.3.1
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -16,7 +16,9 @@
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
 	var command_hub_url = "https://steamcommunity.com/app/329630",
-		current_version = "1.3.0";
+		current_version = "1.3.1",
+		entry_delay_min = 500,
+		entry_delay_max = 1500;
 
 	var gleamSolver = (function() {
 		var gleam = null,
@@ -25,9 +27,9 @@
 			authentications = {};
 
 		// possible modes:
-		// "undo_all" (Instant-win mode): There should be no record of any social media activity on the user's accounts
-		// "undo_none (Raffle mode): All record of social media activity should remain on the user's accounts
-		// "undo_some" (Not presently used): Mark all entries and remove all possible record of social media activity on the user's accounts
+		// "undo_all" (Instant-win mode): There should be no public record of any social media activity on the user's accounts
+		// "undo_none (Raffle mode): All public record of social media activity should remain on the user's accounts
+		// "undo_some" (Not presently used): Mark all entries and remove all possible public record of social media activity on the user's accounts
 		function determineMode() {
 			switch(gleam.campaign.campaign_type) {
 				case "Reward": return "undo_all"; // Instant-win
@@ -50,128 +52,131 @@
 
 		// decide what to do for each of the entries
 		function handleEntries() {
-			var entries = jQuery(".entry-method");
+			var entries = jQuery(".entry-method").sort(function() { return 0.5 - Math.random(); });
+			var delay = 0;
 
 			for(var i = 0; i < entries.length; i++) {
-				var current_entry = angular.element(entries[i]).scope();
+				var entry = angular.element(entries[i]).scope();
 				
-				if(gleam.canEnter(current_entry.entry_method) &&
-					(!current_entry.entry_method.requires_authentication || authentications[current_entry.entry_method.provider] === true)
+				if(gleam.canEnter(entry.entry_method) && (
+						!entry.entry_method.requires_authentication || 
+						authentications[entry.entry_method.provider] === true
+					)
 				) {
-					//TODO: add more entry types
-					try {
-						switch(current_entry.entry_method.entry_type) {
-							case "download_app":
-							case "facebook_enter":
-							case "facebook_visit":
-							case "googleplus_visit":
-							case "instagram_enter":
-							case "steam_enter":
-							case "steam_play_game":
-							case "twitchtv_enter":
-							case "twitchtv_subscribe":
-							case "twitter_enter":
-							case "youtube_subscribe":
-								handleClickEntry(current_entry);
-								break;
+					// wait a random amount of time between each attempt to appear more human
+					delay += Math.floor(Math.random() * (entry_delay_max - entry_delay_min)) + entry_delay_min;
+					
+					(function(entry, delay) {
+						var temp_interval = setTimeout(function() {
+							clearInterval(temp_interval);
+						
+							try {
+								// the following entries either leave no public record on the user's social media accounts, 
+								// or they do, and the script is capable of then deleting those records
+								switch(entry.entry_method.entry_type) {
+									case "download_app":
+									case "facebook_enter":
+									case "facebook_visit":
+									case "googleplus_visit":
+									case "instagram_enter":
+									case "steam_enter":
+									case "steam_play_game":
+									case "twitchtv_enter":
+									case "twitchtv_subscribe":
+									case "twitter_enter":
+									case "youtube_subscribe":
+										handleClickEntry(entry);
+										break;
 
-							case "youtube_watch":
-							case "vimeo_watch":
-								handleVideoEntry(current_entry);
-								break;
+									case "youtube_watch":
+									case "vimeo_watch":
+										handleVideoEntry(entry);
+										break;
 
-							case "steam_join_group":
-								if(steam_handler === null) steam_handler = loadSteamHandler.getInstance();
-								steam_handler.handleEntry(current_entry);
-								break;
+									case "steam_join_group":
+										handleSteamEntry(entry);
+										break;
 
-							default:
-								break;
-						}
+									default:
+										break;
+								}
 
-						// for the following entries it's not possible to automate without potentially
-						// being disqualified in a gleam raffle.  only handle these if the user doesn't care
-						// about the status of the entry after this script completes: such as in the case of
-						// gleam instant-win giveaways
-						if(script_mode != "undo_none") {
-							switch(current_entry.entry_method.entry_type) {
-								case "pinterest_board":
-								case "pinterest_follow":
-								case "pinterest_pin":
-								case "youtube_comment":
-								case "youtube_video":
-								case "twitter_hashtags":
-									handleQuestionEntry(current_entry);
-									break;
+								// for the following entries it's not possible to automate without potentially
+								// being disqualified in a gleam raffle.  only handle these if the user doesn't care
+								// about the status of the entry after this script completes: such as in the case of
+								// gleam instant-win giveaways
+								if(script_mode != "undo_none") {
+									switch(entry.entry_method.entry_type) {
+										case "pinterest_board":
+										case "pinterest_follow":
+										case "pinterest_pin":
+										case "youtube_comment":
+										case "youtube_video":
+										case "twitter_hashtags":
+											handleQuestionEntry(entry);
+											break;
 
-								// custom actions can take a bunch of different forms
-								case "custom_action":
-									if(current_entry.entry_method.template != "visit" && (
-											current_entry.entry_method.method_type == "Ask a question" ||
-											current_entry.entry_method.method_type == "Allow question or tracking" ||
-											current_entry.entry_method.config5 ||
-											current_entry.entry_method.config6
-										)
-									) {
-										if(current_entry.entry_method.config5 !== null) {
-											handleMultipleChoiceQuestionEntry(current_entry);
-										} else {
-											handleQuestionEntry(current_entry);
-										}
-									} else {
-										handleClickEntry(current_entry);
+										case "custom_action":
+											handleCustomAction(entry);
+											break;
+
+										case "upload_action":
+											handleUploadEntry(entry);
+											break;
+											
+										default:
+											break;
 									}
-									break;
+								}
 
-								default:
-									break;
+								// the following entry types cannot presently be undone, and so only automate
+								// them if the user doesn't want social media actions to be undone: such as in the 
+								// case of gleam raffles
+								if(script_mode != "undo_all") {
+									switch(entry.entry_method.entry_type) {
+										case "email_subscribe":
+										case "eventbrite_attend_event":
+										case "eventbrite_attend_venue":
+										case "instagram_follow":
+										case "instagram_like":
+										case "soundcloud_follow":
+										case "soundcloud_like":
+										case "tumblr_follow":
+										case "tumblr_like":
+										case "tumblr_reblog":
+										case "tumblr_reblog_campaign":
+										case "twitchtv_follow":
+										case "twitter_follow":
+										case "twitter_retweet":
+										case "twitter_tweet":
+											handleClickEntry(entry);
+											break;
+
+										//case "facebook_media": seems to be bugged
+										case "instagram_choose":
+										case "twitter_media":
+											handleMediaShare(entry);
+											break;
+
+										default:
+											break;
+									}
+								}
 							}
-						}
-
-						// the following entry types cannot presently be undone, and so only automate
-						// them if the user doesn't want social media actions to be undone: such as in the 
-						// case of gleam raffles
-						if(script_mode != "undo_all") {
-							switch(current_entry.entry_method.entry_type) {
-								case "email_subscribe":
-								case "eventbrite_attend_event":
-								case "eventbrite_attend_venue":
-								case "instagram_follow":
-								case "instagram_like":
-								case "soundcloud_follow":
-								case "soundcloud_like":
-								case "tumblr_follow":
-								case "tumblr_like":
-								case "tumblr_reblog":
-								case "tumblr_reblog_campaign":
-								case "twitchtv_follow":
-								case "twitter_follow":
-								case "twitter_retweet":
-								case "twitter_tweet":
-									handleClickEntry(current_entry);
-									break;
-
-								//case "facebook_media": this entry type seems to be bugged
-								case "instagram_choose":
-								case "twitter_media":
-									handleMediaShare(current_entry);
-									break;
-
-								default:
-									break;
+							catch(e) {
+								console.log(e);
 							}
-						}
-					}
-					catch(e) {
-						console.log(e);
-					}
+						}, delay);
+					})(entry, delay);
 				}
 			}
-				
-			// hide any entry submission forms that may be open
-			gleam.hideEntryMethodAndShowPopover(gleam.entry_methods);
 		}
 
+		// provide visual feedback to the user that something is happening
+		function markEntryLoading(entry) {
+			entry.entry_method.entering = true;
+		}
+		
 		// finish up an entry
 		function markEntryCompleted(entry, callback) {
 			entry.entry_method.entering = false;
@@ -181,17 +186,12 @@
 			// callback after gleam marks the entry as completed
 			if(typeof(callback) == "function") {
 				var temp_interval = setInterval(function() {
-					if(!gleam.canEnter(entry.entry_method)) {
+					if(!gleam.canEnter(entry.entry_method) || entry.entry_method.error) {
 						clearInterval(temp_interval);
 						callback();
 					}
 				}, 500);
 			}
-		}
-
-		// provide visual feedback to the user that something is happening
-		function markEntryLoading(entry) {
-			entry.entry_method.entering = true;
 		}
 
 		// trick gleam into thinking we've clicked a link
@@ -209,34 +209,70 @@
 			markEntryCompleted(entry);
 		}
 
+		// share a random media from the selection provided
+		function handleMediaShare(entry) {
+			// need to click the entry before entry_method.media is defined
+			entry.enterLinkClick(entry.entry_method);
+			markEntryLoading(entry);
+
+			// and then wait
+			var temp_interval = setInterval(function() {
+				if(entry.entry_method.media) {
+					var choices = entry.entry_method.media,
+						rand_choice = choices[Math.floor(Math.random() * choices.length)];
+
+					clearInterval(temp_interval);
+					entry.entry_method.selected = rand_choice;
+					entry.mediaChoiceContinue(entry.entry_method);
+					markEntryCompleted(entry);
+				}
+			}, 500);
+		}
+		
+		// upload a file
+		function handleUploadEntry(entry) {
+			//TODO: example at https://gleam.io/W4GAG/every-entry-type "Upload a Video of You Singing"
+		}
+
+		// custom actions can take on many different forms, 
+		// decide what it is we're working with here
+		function handleCustomAction(entry) {
+			if(entry.entry_method.template != "visit" && (
+					entry.entry_method.method_type == "Ask a question" ||
+					entry.entry_method.method_type == "Allow question or tracking" ||
+					entry.entry_method.config5 ||
+					entry.entry_method.config6
+				)
+			) {
+				if(entry.entry_method.config5 !== null) {
+					handleMultipleChoiceQuestionEntry(entry);
+				} else {
+					handleQuestionEntry(entry);
+				}
+			} else {
+				handleClickEntry(entry);
+			}
+		}
+
 		// choose an answer to a multiple choice question
 		function handleMultipleChoiceQuestionEntry(entry) {
 			var choices = entry.entry_method.config5.split("\n"),
 				rand_choice = choices[Math.floor(Math.random() * choices.length)];
 
 			markEntryLoading(entry);
-
-			//TODO: there's probably more templates that I'm missing here
-			switch(entry.entry_method.template) {
-				case "choose_image":
-					entry.imageChoice(entry.entry_method, rand_choice);
-					entry.imageChoiceContinue(entry.entry_method);
-					break;
-
-				case "choose_option":
-					entry.entryState.formData[entry.entry_method.id] = rand_choice;
-					entry.saveEntryDetails(entry.entry_method);
-					break;
-
-				case "multiple_choice":
-					entry.entryState.formData[entry.entry_method.id][rand_choice] = true;
-					entry.saveEntryDetails(entry.entry_method);
-					break;
-
-				default:
-					break;
+			if(entry.entry_method.template == "choose_image") {
+				entry.imageChoice(entry.entry_method, rand_choice);
+				entry.imageChoiceContinue(entry.entry_method);
+			} else if(entry.entry_method.template == "choose_option") {
+				entry.entryState.formData[entry.entry_method.id] = rand_choice;
+				entry.saveEntryDetails(entry.entry_method);
+			} else if(entry.entry_method.template == "multiple_choice") {
+				entry.entryState.formData[entry.entry_method.id][rand_choice] = true;
+				entry.saveEntryDetails(entry.entry_method);
+			} else {
+				//TODO: there's probably more templates that I'm missing here.
+				// i've seen one with a dropdown box before, but haven't seen it again since
 			}
-
 			markEntryCompleted(entry);
 		}
 
@@ -244,7 +280,7 @@
 		function handleQuestionEntry(entry) {
 			var rand_string = null,
 				string_regex = null;
-			
+
 			if(entry.entry_method.entry_type == "youtube_video") {
 				// asks for a youtube video link, and actually verifies that it's real
 				rand_string = "https://www.youtube.com/watch?v=oHg5SJYRHA0";
@@ -253,10 +289,11 @@
 					// gleam wants a link to a tweet here, but doesn't actually check the link
 					string_regex = "https://twitter\\.com/[a-zA-Z]{5,15}/status/[0-9]{18}/";
 				} else {
-					// config6 is either "" or null for anything is accepted, or a regex that the answer is checked against (validated server-side)
+					// config6 is either "" or null to mean anything is accepted
+					// or a regex that the answer is checked against (validated both client and server-side)
 					string_regex = (entry.entry_method.config6 === "" || entry.entry_method.config6 === null) ? "\\.+" : entry.entry_method.config6;
 				}
-					
+
 				// generate a random matching string
 				var rand_string_generator = new RandExp(string_regex);
 				rand_string_generator.tokens.stack[0].max = 1; // prevent long strings
@@ -267,7 +304,7 @@
 			// submit the answer
 			entry.entryState.formData[entry.entry_method.id] = rand_string;
 			entry.verifiedValueChanged(entry.entry_method);
-			
+
 			// wait until the answer is verified
 			var temp_interval = setInterval(function() {
 				if(entry.verifyStatus(entry.entry_method) == "good") {
@@ -277,25 +314,15 @@
 				}
 			}, 500);
 		}
-		
-		// share a random media from the selection provided
-		function handleMediaShare(entry) {
-			// need to click the entry before media is defined
-			entry.enterLinkClick(entry.entry_method);
+
+		// init steamHandler
+		function handleSteamEntry(entry) {
+			if(steam_handler === null) {
+				steam_handler = loadSteamHandler.getInstance();
+			}
+
 			markEntryLoading(entry);
-			
-			// and then wait
-			var temp_interval = setInterval(function() {
-				if(entry.entry_method.media) {
-					var choices = entry.entry_method.media,
-						rand_choice = choices[Math.floor(Math.random() * choices.length)];
-						
-					clearInterval(temp_interval);
-					entry.entry_method.selected = rand_choice;
-					entry.mediaChoiceContinue(entry.entry_method);
-					markEntryCompleted(entry);
-				}
-			}, 500);
+			steam_handler.handleEntry(entry);
 		}
 
 		// handles steam_join_group entries
@@ -305,44 +332,53 @@
 				// to the user.  command_hub is simply a page on steamcommunity.com that can be loaded
 				// into an iframe.  We can communicate with the iframe from here and use it as our
 				// interface to joining and leaving Steam groups.
-				var command_hub = document.createElement('iframe');
+				var command_hub = document.createElement('iframe'),
+					command_hub_loaded = false;
 				
 				command_hub.style.display = "none";
 				command_hub.src = command_hub_url;
 				document.body.appendChild(command_hub);
 
 				function handleGroup(entry, group_name, group_id) {
-					// wait for the command hub to load
-					command_hub.addEventListener("load", function() {
-						// make contact with the command hub
-						command_hub.contentWindow.postMessage({action: "join", name: group_name, id: group_id}, "*");
+					if(command_hub_loaded) {
+						handleGroupCommunication(entry, group_name, group_id);
+					} else {
+						// wait for the command hub to load
+						command_hub.addEventListener("load", function() {
+							command_hub_loaded = true;
+							handleGroupCommunication(entry, group_name, group_id);
+						});
+					}
+				}
+				
+				function handleGroupCommunication(entry, group_name, group_id) {
+					// make contact with the command hub
+					command_hub.contentWindow.postMessage({action: "join", name: group_name, id: group_id}, "*");
 
-						// wait for a response
-						window.addEventListener("message", function(event) {
-							if(event.source == command_hub.contentWindow && event.data.status == "not_logged_in") {
-								// we're not logged in, try to mark it anyway incase we're already a member of the group
+					// wait for a response
+					window.addEventListener("message", function(event) {
+						if(event.source == command_hub.contentWindow && event.data.status == "not_logged_in") {
+							// we're not logged in, try to mark it anyway incase we're already a member of the group
+							markEntryCompleted(entry);
+							gleamSolverUI.showError("You must be logged into steamcommunity.com");
+						} else if(event.source == command_hub.contentWindow && event.data.id == group_id) {
+							if(event.data.status == "already_joined") {
+								// user was already a member, don't even consider leaving
 								markEntryCompleted(entry);
-								gleamSolverUI.showError("You must be logged into steamcommunity.com");
-							} else if(event.source == command_hub.contentWindow && event.data.id == group_id) {
-								if(event.data.status == "already_joined") {
-									// user was already a member, don't even consider leaving
-									markEntryCompleted(entry);
-								} else if(event.data.status == "joined") {
-									markEntryCompleted(entry, function() {
-										if(script_mode != "undo_none") {
-											// depending on mode, leave the group
-											command_hub.contentWindow.postMessage({action: "leave", name: group_name, id: group_id}, "*");
-										}
-									});
-								}
+							} else if(event.data.status == "joined") {
+								markEntryCompleted(entry, function() {
+									if(script_mode != "undo_none") {
+										// depending on mode, leave the group
+										command_hub.contentWindow.postMessage({action: "leave", name: group_name, id: group_id}, "*");
+									}
+								});
 							}
-						}, false);
-					});
+						}
+					}, false);
 				}
 
 				return {
 					handleEntry: function(entry) {
-						markEntryLoading(entry);
 						handleGroup(entry, entry.entry_method.config3, entry.entry_method.config4);
 					}
 				};
