@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.3.1
+// @version 1.3.2
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -16,9 +16,9 @@
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
 	var command_hub_url = "https://steamcommunity.com/app/329630",
-		current_version = "1.3.1",
+		current_version = "1.3.2",
 		entry_delay_min = 500,
-		entry_delay_max = 1500;
+		entry_delay_max = 3000;
 
 	var gleamSolver = (function() {
 		var gleam = null,
@@ -52,8 +52,11 @@
 
 		// decide what to do for each of the entries
 		function handleEntries() {
-			var entries = jQuery(".entry-method").sort(function() { return 0.5 - Math.random(); });
-			var delay = 0;
+			var entries = jQuery(".entry-method"),
+				delay = 0;
+			
+			// jumble the order
+			entries.sort(function() { return 0.5 - Math.random(); });
 
 			for(var i = 0; i < entries.length; i++) {
 				var entry = angular.element(entries[i]).scope();
@@ -63,13 +66,11 @@
 						authentications[entry.entry_method.provider] === true
 					)
 				) {
-					// wait a random amount of time between each attempt to appear more human
+					// wait a random amount of time between each attempt, to appear more human
 					delay += Math.floor(Math.random() * (entry_delay_max - entry_delay_min)) + entry_delay_min;
 					
 					(function(entry, delay) {
-						var temp_interval = setTimeout(function() {
-							clearInterval(temp_interval);
-						
+						var temp_interval = setTimeout(function() { clearInterval(temp_interval);						
 							try {
 								// the following entries either leave no public record on the user's social media accounts, 
 								// or they do, and the script is capable of then deleting those records
@@ -111,7 +112,7 @@
 										case "pinterest_follow":
 										case "pinterest_pin":
 										case "youtube_comment":
-										case "youtube_video":
+										//case "youtube_video": probably better not to do this one, as it can be easily detected
 										case "twitter_hashtags":
 											handleQuestionEntry(entry);
 											break;
@@ -340,18 +341,6 @@
 				document.body.appendChild(command_hub);
 
 				function handleGroup(entry, group_name, group_id) {
-					if(command_hub_loaded) {
-						handleGroupCommunication(entry, group_name, group_id);
-					} else {
-						// wait for the command hub to load
-						command_hub.addEventListener("load", function() {
-							command_hub_loaded = true;
-							handleGroupCommunication(entry, group_name, group_id);
-						});
-					}
-				}
-				
-				function handleGroupCommunication(entry, group_name, group_id) {
 					// make contact with the command hub
 					command_hub.contentWindow.postMessage({action: "join", name: group_name, id: group_id}, "*");
 
@@ -379,7 +368,15 @@
 
 				return {
 					handleEntry: function(entry) {
-						handleGroup(entry, entry.entry_method.config3, entry.entry_method.config4);
+						if(command_hub_loaded) {
+							handleGroup(entry, entry.entry_method.config3, entry.entry_method.config4);
+						} else {
+							// wait for the command hub to load
+							command_hub.addEventListener("load", function() {
+								command_hub_loaded = true;
+								handleGroup(entry, entry.entry_method.config3, entry.entry_method.config4);
+							});
+						}
 					}
 				};
 			}
