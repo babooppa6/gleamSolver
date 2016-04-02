@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.3.5
+// @version 1.3.6
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -21,7 +21,7 @@
 	// "undo_none (Raffle mode): All public record of social media activity should remain on the user's accounts
 	// "undo_some" (Instant-win Full mode): Mark all entries and remove all possible public record of social media activity on the user's accounts
 	var valid_modes = ["undo_all", "undo_none", "undo_some"],
-		current_version = "1.3.5",
+		current_version = "1.3.6",
 		entry_delay_min = 500,
 		entry_delay_max = 3000;
 
@@ -379,7 +379,7 @@
 						if(event.source == command_hub.contentWindow && event.data.status == "not_logged_in") {
 							// we're not logged in, try to mark it anyway incase we're already a member of the group
 							markEntryCompleted(entry);
-							gleamSolverUI.showError("You must be logged into steamcommunity.com");
+							gleamSolverUI.showError('You must be logged into <a href="https://steamcommunity.com" style="color: #fff" target="_blank">steamcommunity.com</a>');
 						} else if(event.source == command_hub.contentWindow && event.data.id == group_id) {
 							if(event.data.status == "already_joined") {
 								// user was already a member, don't even consider leaving
@@ -505,7 +505,7 @@
 				// don't print the same error multiple times
 				if(active_errors.indexOf(msg) == -1) {
 					active_errors.push(msg);
-					gleam_solver_container.append(jQuery("<div>", { css: error_style, text: "Gleam.solver Error: " + msg }));
+					gleam_solver_container.append(jQuery("<div>", { css: error_style }).html("Gleam.solver Error: " + msg));
 					updateTopMargin();
 				}
 			},
@@ -519,7 +519,7 @@
 				}
 
 				// update notification
-				active_notifications[notification_id].text("Gleam.solver Notification: " + msg);
+				active_notifications[notification_id].html("Gleam.solver Notification: " + msg);
 				updateTopMargin();
 			},
 
