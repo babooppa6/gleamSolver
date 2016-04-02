@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.3.4
+// @version 1.3.5
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -15,8 +15,13 @@
 (function() {
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
-	var command_hub_url = "https://steamcommunity.com/app/329630",
-		current_version = "1.3.4",
+	var command_hub_url = "https://steamcommunity.com/app/329630";
+	// valid modes:
+	// "undo_all" (Instant-win mode): There should be no public record of any social media activity on the user's accounts
+	// "undo_none (Raffle mode): All public record of social media activity should remain on the user's accounts
+	// "undo_some" (Instant-win Full mode): Mark all entries and remove all possible public record of social media activity on the user's accounts
+	var valid_modes = ["undo_all", "undo_none", "undo_some"],
+		current_version = "1.3.5",
 		entry_delay_min = 500,
 		entry_delay_max = 3000;
 
@@ -26,15 +31,12 @@
 			script_mode = null,
 			authentications = {};
 
-		// possible modes:
-		// "undo_all" (Instant-win mode): There should be no public record of any social media activity on the user's accounts
-		// "undo_none (Raffle mode): All public record of social media activity should remain on the user's accounts
-		// "undo_some" (Not presently used): Mark all entries and remove all possible public record of social media activity on the user's accounts
+		// choose a mode based on the giveaway type
 		function determineMode() {
 			switch(gleam.campaign.campaign_type) {
 				case "Reward": return "undo_all"; // Instant-win
 				case "Competition": return "undo_none";	// Raffle
-				default: return "undo_all";
+				default: return "undo_all"; // Safest mode to fall back on
 			}
 		}
 
@@ -440,6 +442,16 @@
 
 			completeEntries: function() {
 				handleEntries();
+			},			
+			
+			getMode: function() {
+				return script_mode;
+			},
+			
+			setMode: function(mode) {
+				if(valid_modes.indexOf(mode) != -1) {
+					script_mode = mode;
+				}
 			}
 		};
 	})();
@@ -448,32 +460,12 @@
 		var gleam_solver_container = null,
 			active_errors = [],
 			active_notifications = {},
-		    container_style = {
-				width: "100%",
-				"font-size": "18px",
-				position: "fixed",
-				top: "0px",
-				left: "0px",
-				"z-index": 9999999999
-			},
-			notification_style = {
-				background: "#000",
-				color: "#3498db",
-				"box-shadow": "-10px 2px 10px #000",
-				padding: "8px",
-				width: "100%",
-			},
 		    button_class = "btn btn-embossed btn-info",
-		    button_style = {
-				margin: "2px 0px 2px 16px"
-			},
-			error_style = {
-				background: "#e74c3c",
-				color: "#fff",
-				"box-shadow": "-10px 2px 10px #e74c3c",
-				padding: "8px",
-				width: "100%",
-			};
+		    button_style = { margin: "2px 0px 2px 16px" },
+			selectbox_style = { margin: "0px 0px 0px 16px" },
+		    container_style = { fontSize: "18px", left: "0px", position: "fixed", top: "0px", width: "100%", zIndex: "9999999999" },
+			notification_style = { background: "#000", boxShadow: "-10px 2px 10px #000", color: "#3498db", padding: "8px", width: "100%", },
+			error_style = { background: "#e74c3c", boxShadow: "-10px 2px 10px #e74c3c", color: "#fff", padding: "8px", width: "100%" };
 
 		// push the page down to make room for notifications
 		function updateTopMargin() {
@@ -489,6 +481,13 @@
 				gleam_solver_container.append(
 					jQuery("<div>", { css: notification_style }).append(
 						jQuery("<span>", { text: "Gleam.solver v" + current_version })).append(
+						jQuery("<select>", { css: selectbox_style }).append(
+							jQuery("<option>", { text: "Instant-win Mode", value: "undo_all", selected: (gleamSolver.getMode() == "undo_all") })).append(
+							jQuery("<option>", { text: "Raffle Mode", value: "undo_none", selected: (gleamSolver.getMode() == "undo_none") })).append(
+							jQuery("<option>", { text: "Instant-win Full Mode", value: "undo_some", selected: (gleamSolver.getMode() == "undo_some") })).change(function() {
+								gleamSolver.setMode(jQuery(this).val());
+							})
+						).append(
 						jQuery("<a>", { text: "Click here to auto-complete", class: button_class, css: button_style}).click(function() {
 							jQuery(this).unbind("click");
 							jQuery(this).parent().slideUp(400, function() {

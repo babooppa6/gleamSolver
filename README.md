@@ -1,6 +1,6 @@
 #Gleam.solver
 ##Purpose
-Automates entry into both types of Gleam.io Giveaways: Instant-wins and Raffles
+Automate entry into both types of Gleam.io Giveaways: Instant-wins and Raffles
 
 **Disclaimer**: The usage of this script violates Gleam.io's Terms of Service.  Use at your own risk.
 
@@ -13,6 +13,25 @@ If the script doesn't auto-complete a certain entry type in this mode, then it's
 ####Raffle mode
 
 In the case of raffles, you may be disqualified for undoing any of the social media actions that the raffle asks of you. To prevent this, the script will only auto-complete the entries, it will not undo any of them. If the script doesn't auto-complete a certain entry type in this mode, then it's because it can't be auto-completed without the risk of disqualification, and so you'll have to complete it manually.
+
+####Instant-win Full mode
+
+This is an alternative to Instant-win mode that isn't used by default, but can be selected using the script's UI.  This mode is something of a mix between the two other available modes.  It will auto-complete everything it has the ability to auto-complete, and then it will undo everything is has the ability to auto-undo.
+
+You might use this mode if you would like the script to auto-undo the actions on accounts currently supported, but don't care about undoing anything on the accounts not currently supported.
+
+The script **can** undo all actions on these accounts:
+  * Steam
+
+The script **cannot** undo any actions on these accounts:
+  * Eventbrite
+  * Facebook
+  * Instagram
+  * Soundcloud
+  * Tumblr
+  * TwitchTV
+  * Twitter
+  * Youtube
 
 ##Installation
 1. Install the [Tampermonkey extension](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en) (for Chrome) or the [Greasemonkey extension](https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/) (for Firefox)
