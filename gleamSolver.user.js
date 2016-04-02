@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.3.2
+// @version 1.3.3
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -16,7 +16,7 @@
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
 	var command_hub_url = "https://steamcommunity.com/app/329630",
-		current_version = "1.3.2",
+		current_version = "1.3.3",
 		entry_delay_min = 500,
 		entry_delay_max = 3000;
 
@@ -70,102 +70,109 @@
 					delay += Math.floor(Math.random() * (entry_delay_max - entry_delay_min)) + entry_delay_min;
 					
 					(function(entry, delay) {
-						var temp_interval = setTimeout(function() { clearInterval(temp_interval);						
-							try {
-								// the following entries either leave no public record on the user's social media accounts, 
-								// or they do, and the script is capable of then deleting those records
-								switch(entry.entry_method.entry_type) {
-									case "download_app":
-									case "facebook_enter":
-									case "facebook_visit":
-									case "googleplus_visit":
-									case "instagram_enter":
-									case "steam_enter":
-									case "steam_play_game":
-									case "twitchtv_enter":
-									case "twitchtv_subscribe":
-									case "twitter_enter":
-									case "youtube_subscribe":
-										handleClickEntry(entry);
-										break;
-
-									case "youtube_watch":
-									case "vimeo_watch":
-										handleVideoEntry(entry);
-										break;
-
-									case "steam_join_group":
-										handleSteamEntry(entry);
-										break;
-
-									default:
-										break;
-								}
-
-								// for the following entries it's not possible to automate without potentially
-								// being disqualified in a gleam raffle.  only handle these if the user doesn't care
-								// about the status of the entry after this script completes: such as in the case of
-								// gleam instant-win giveaways
-								if(script_mode != "undo_none") {
+						var temp_interval = setTimeout(function() { clearInterval(temp_interval);
+							// check to see if the giveaway ended or if we've already gotten a reward
+							if(!gleam.showPromotionEnded() && !(
+									gleam.campaign.campaign_type == "Reward" &&
+									gleam.contestantState.contestant.claims[gleam.incentives[0].id]
+								)
+							) {
+								try {
+									// the following entries either leave no public record on the user's social media accounts, 
+									// or they do, and the script is capable of then deleting those records
 									switch(entry.entry_method.entry_type) {
-										case "pinterest_board":
-										case "pinterest_follow":
-										case "pinterest_pin":
-										case "youtube_comment":
-										//case "youtube_video": probably better not to do this one, as it can be easily detected
-										case "twitter_hashtags":
-											handleQuestionEntry(entry);
-											break;
-
-										case "custom_action":
-											handleCustomAction(entry);
-											break;
-
-										case "upload_action":
-											handleUploadEntry(entry);
-											break;
-											
-										default:
-											break;
-									}
-								}
-
-								// the following entry types cannot presently be undone, and so only automate
-								// them if the user doesn't want social media actions to be undone: such as in the 
-								// case of gleam raffles
-								if(script_mode != "undo_all") {
-									switch(entry.entry_method.entry_type) {
-										case "email_subscribe":
-										case "eventbrite_attend_event":
-										case "eventbrite_attend_venue":
-										case "instagram_follow":
-										case "instagram_like":
-										case "soundcloud_follow":
-										case "soundcloud_like":
-										case "tumblr_follow":
-										case "tumblr_like":
-										case "tumblr_reblog":
-										case "tumblr_reblog_campaign":
-										case "twitchtv_follow":
-										case "twitter_follow":
-										case "twitter_retweet":
-										case "twitter_tweet":
+										case "download_app":
+										case "facebook_enter":
+										case "facebook_visit":
+										case "googleplus_visit":
+										case "instagram_enter":
+										case "steam_enter":
+										case "steam_play_game":
+										case "twitchtv_enter":
+										case "twitchtv_subscribe":
+										case "twitter_enter":
+										case "youtube_subscribe":
 											handleClickEntry(entry);
 											break;
 
-										//case "facebook_media": seems to be bugged
-										case "instagram_choose":
-										case "twitter_media":
-											handleMediaShare(entry);
+										case "youtube_watch":
+										case "vimeo_watch":
+											handleVideoEntry(entry);
+											break;
+
+										case "steam_join_group":
+											handleSteamEntry(entry);
 											break;
 
 										default:
 											break;
 									}
+
+									// for the following entries it's not possible to automate without potentially
+									// being disqualified in a gleam raffle.  only handle these if the user doesn't care
+									// about the status of the entry after this script completes: such as in the case of
+									// gleam instant-win giveaways
+									if(script_mode != "undo_none") {
+										switch(entry.entry_method.entry_type) {
+											case "pinterest_board":
+											case "pinterest_follow":
+											case "pinterest_pin":
+											case "youtube_comment":
+											//case "youtube_video": probably better not to do this one yet, as it can be easily detected
+											case "twitter_hashtags":
+												handleQuestionEntry(entry);
+												break;
+
+											case "custom_action":
+												handleCustomAction(entry);
+												break;
+
+											case "upload_action":
+												handleUploadEntry(entry);
+												break;
+												
+											default:
+												break;
+										}
+									}
+
+									// the following entry types cannot presently be undone, and so only automate
+									// them if the user doesn't want social media actions to be undone: such as in the 
+									// case of gleam raffles
+									if(script_mode != "undo_all") {
+										switch(entry.entry_method.entry_type) {
+											case "email_subscribe":
+											case "eventbrite_attend_event":
+											case "eventbrite_attend_venue":
+											case "instagram_follow":
+											case "instagram_like":
+											case "soundcloud_follow":
+											case "soundcloud_like":
+											case "tumblr_follow":
+											case "tumblr_like":
+											case "tumblr_reblog":
+											case "tumblr_reblog_campaign":
+											case "twitchtv_follow":
+											case "twitter_follow":
+											case "twitter_retweet":
+											case "twitter_tweet":
+												handleClickEntry(entry);
+												break;
+
+											//case "facebook_media": seems to be bugged
+											case "instagram_choose":
+											case "twitter_media":
+												handleMediaShare(entry);
+												break;
+
+											default:
+												break;
+										}
+									}
 								}
-							}
-							catch(e) {
-								console.log(e);
+								catch(e) {
+									console.log(e);
+								}
 							}
 						}, delay);
 					})(entry, delay);
@@ -284,20 +291,26 @@
 
 			if(entry.entry_method.entry_type == "youtube_video") {
 				// asks for a youtube video link, and actually verifies that it's real
+				//TODO: grab a random youtube link off youtube and use that instead
+				// using a predefined link makes detection too easy
 				rand_string = "https://www.youtube.com/watch?v=oHg5SJYRHA0";
 			} else {
 				if(entry.entry_method.entry_type == "twitter_hashtags") {
 					// gleam wants a link to a tweet here, but doesn't actually check the link
-					string_regex = "https://twitter\\.com/[a-zA-Z]{5,15}/status/[0-9]{18}/";
+					string_regex = "https://twitter\\.com/[a-z]{5,15}/status/[0-9]{1,18}";
 				} else {
-					// config6 is either "" or null to mean anything is accepted
-					// or a regex that the answer is checked against (validated both client and server-side)
-					string_regex = (entry.entry_method.config6 === "" || entry.entry_method.config6 === null) ? "\\.+" : entry.entry_method.config6;
+					if(entry.entry_method.config6 === "" || entry.entry_method.config6 === null) {
+						// config6 is either "" or null to mean anything is accepted
+						string_regex = "[a-z]{5,15}";
+					} else {
+						// or a regex that the answer is checked against (validated both client and server-side)
+						string_regex = entry.entry_method.config6;
+					}
 				}
 
 				// generate a random matching string
 				var rand_string_generator = new RandExp(string_regex);
-				rand_string_generator.tokens.stack[0].max = 1; // prevent long strings
+				rand_string_generator.tokens.stack[0].max = Math.floor(Math.random() * 3) + 1; // prevent long substrings
 				rand_string = rand_string_generator.gen();
 			}
 
