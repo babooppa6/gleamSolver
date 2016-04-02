@@ -20,5 +20,3 @@ In the case of raffles, you may be disqualified for undoing any of the social me
 3. Click "Install"
 
 By default, the script will auto-update roughly every 24 hours, but you can force an update by re-installing using the link above.
-
-You can test and verify that the script works at any of of the sample giveaways [here](https://gleam.io/examples).
