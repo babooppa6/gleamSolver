@@ -3,7 +3,7 @@
 // @namespace https://github.com/Citrinate/gleamSolver
 // @description Auto-completes Gleam.io contest entries
 // @author Citrinate
-// @version 1.3.3
+// @version 1.3.4
 // @match *://gleam.io/*
 // @match https://steamcommunity.com/app/329630
 // @updateURL https://raw.githubusercontent.com/Citrinate/gleamSolver/master/gleamSolver.user.js
@@ -16,7 +16,7 @@
 	// command_hub_url is the only page on steamcommunity that this script will be injected at (as referenced in @match above)
 	// it can be any page on steamcommunity.com that can be loaded into an iframe
 	var command_hub_url = "https://steamcommunity.com/app/329630",
-		current_version = "1.3.3",
+		current_version = "1.3.4",
 		entry_delay_min = 500,
 		entry_delay_max = 3000;
 
@@ -53,7 +53,9 @@
 		// decide what to do for each of the entries
 		function handleEntries() {
 			var entries = jQuery(".entry-method"),
-				delay = 0;
+				delay = 0,
+				num_entries = 0,
+				current_entry = 0;
 			
 			// jumble the order
 			entries.sort(function() { return 0.5 - Math.random(); });
@@ -68,15 +70,22 @@
 				) {
 					// wait a random amount of time between each attempt, to appear more human
 					delay += Math.floor(Math.random() * (entry_delay_max - entry_delay_min)) + entry_delay_min;
+					num_entries++;
 					
-					(function(entry, delay) {
-						var temp_interval = setTimeout(function() { clearInterval(temp_interval);
+					(function(current_entry, entry, delay) {
+						var temp_interval = setTimeout(function() { clearInterval(temp_interval);						
 							// check to see if the giveaway ended or if we've already gotten a reward
 							if(!gleam.showPromotionEnded() && !(
 									gleam.campaign.campaign_type == "Reward" &&
 									gleam.contestantState.contestant.claims[gleam.incentives[0].id]
 								)
 							) {
+								// display progress
+								gleamSolverUI.showNotification("entry_progress", current_entry + "/" + num_entries + " entries processed");							
+								if(current_entry == num_entries) {
+									gleamSolverUI.hideNotification("entry_progress");
+								}
+								
 								try {
 									// the following entries either leave no public record on the user's social media accounts, 
 									// or they do, and the script is capable of then deleting those records
@@ -173,9 +182,15 @@
 								catch(e) {
 									console.log(e);
 								}
+							} else {
+								if(gleam.showPromotionEnded()) {
+									gleamSolverUI.showNotification("finished_early", "Stopped processing entries due to: Contest ended");
+								} else {
+									gleamSolverUI.showNotification("finished_early", "Stopped processing entries due to: Reward recieved");
+								}
 							}
 						}, delay);
-					})(entry, delay);
+					})(++current_entry, entry, delay);
 				}
 			}
 		}
@@ -430,50 +445,95 @@
 	})();
 
 	var gleamSolverUI = (function() {
-		var active_errors = [],
-		    button_class = "btn btn-embossed btn-info",
-		    button_style = { margin: "2px 0px 2px 16px" },
-		    container_style = { 
+		var gleam_solver_container = null,
+			active_errors = [],
+			active_notifications = {},
+		    container_style = {
+				width: "100%",
+				"font-size": "18px",
+				position: "fixed",
+				top: "0px",
+				left: "0px",
+				"z-index": 9999999999
+			},
+			notification_style = {
 				background: "#000",
 				color: "#3498db",
 				"box-shadow": "-10px 2px 10px #000",
 				padding: "8px",
-				"font-size": "18px",
 				width: "100%",
-				position: "fixed",
-				top: "0px",
-				left: "0px",
-				"z-index": 9999999999 
 			},
-			error_style = jQuery.extend({}, container_style, { background: "#e74c3c", color: "#fff", "box-shadow": "-10px 2px 10px #e74c3c" }),
-			gleam_solver_errors = jQuery("<div>", { css: error_style }),
-			gleam_solver_ui = 
-				jQuery("<div>", { css: container_style }).append(
-					jQuery("<span>", { text: "Gleam.solver v" + current_version })).append(
-					jQuery("<a>", { text: "Click here to auto-complete", class: button_class, css: button_style}).click(function() {
-						jQuery(this).unbind("click");
-						gleam_solver_ui.slideUp();
-						jQuery("html").css("margin-top", 0);
-						gleamSolver.completeEntries();
-					})
-				);
+		    button_class = "btn btn-embossed btn-info",
+		    button_style = {
+				margin: "2px 0px 2px 16px"
+			},
+			error_style = {
+				background: "#e74c3c",
+				color: "#fff",
+				"box-shadow": "-10px 2px 10px #e74c3c",
+				padding: "8px",
+				width: "100%",
+			};
+
+		// push the page down to make room for notifications
+		function updateTopMargin() {
+			jQuery("html").css("margin-top", (gleam_solver_container.is(":visible") ? gleam_solver_container.outerHeight() : 0));
+		}
 
 		return {
+			// print the UI
 			loadUI: function() {
-				jQuery("body").prepend(gleam_solver_ui);
+				gleam_solver_container = jQuery("<div>", { css: container_style });
+				jQuery("body").append(gleam_solver_container);
 				jQuery("html").css("overflow-y", "scroll");
-				jQuery("html").css("margin-top", gleam_solver_ui.outerHeight());
+				gleam_solver_container.append(
+					jQuery("<div>", { css: notification_style }).append(
+						jQuery("<span>", { text: "Gleam.solver v" + current_version })).append(
+						jQuery("<a>", { text: "Click here to auto-complete", class: button_class, css: button_style}).click(function() {
+							jQuery(this).unbind("click");
+							jQuery(this).parent().slideUp(400, function() {
+								updateTopMargin();
+								gleamSolver.completeEntries();
+							});
+						})
+					)
+				);
+				updateTopMargin();
 			},
 
+			// print an error
 			showError: function(msg) {
+				// don't print the same error multiple times
 				if(active_errors.indexOf(msg) == -1) {
-					if(active_errors.length === 0) {
-						jQuery("body").append(gleam_solver_errors);
-					}
-
-					gleam_solver_errors.append(jQuery("<div>", { text: "Gleam.solver Error: " + msg }));
-					jQuery("html").css("margin-top", gleam_solver_errors.outerHeight());
 					active_errors.push(msg);
+					gleam_solver_container.append(jQuery("<div>", { css: error_style, text: "Gleam.solver Error: " + msg }));
+					updateTopMargin();
+				}
+			},
+			
+			// display or update a notification
+			showNotification: function(notification_id, msg) {
+				if(!active_notifications[notification_id]) {
+					// new notification
+					active_notifications[notification_id] = jQuery("<div>", { css: notification_style });
+					gleam_solver_container.append(active_notifications[notification_id]);
+				}
+
+				// update notification
+				active_notifications[notification_id].text("Gleam.solver Notification: " + msg);
+				updateTopMargin();
+			},
+
+			// remove a notification
+			hideNotification: function(notification_id) {
+				if(active_notifications[notification_id]) {
+					var old_notification = active_notifications[notification_id];
+
+					delete active_notifications[notification_id];
+					old_notification.slideUp(400, function() {
+						old_notification.remove();
+						updateTopMargin();
+					});
 				}
 			}
 		};
